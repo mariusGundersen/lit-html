@@ -12,7 +12,7 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-import {AttributeCommitter, AttributePart, createMarker, DefaultTemplateProcessor, html, NodePart, render, templateFactory, TemplateResult} from '../../lit-html.js';
+import {AttributeCommitter, AttributePart, createMarker, DefaultTemplateProcessor, EventPart, html, NodePart, render, templateFactory, TemplateResult} from '../../lit-html.js';
 import {stripExpressionMarkers} from '../test-utils/strip-markers.js';
 
 const assert = chai.assert;
@@ -429,6 +429,86 @@ suite('Parts', () => {
         assert.deepEqual(
             Array.from(container.childNodes), [startNode, endNode]);
       });
+    });
+  });
+
+  suite('EventPart', () => {
+    let part: EventPart;
+    let element: HTMLElement;
+
+    setup(() => {
+      element = document.createElement('div');
+    });
+
+    test('supports event listener options on functions', () => {
+      part = new EventPart(element, 'click');
+      let listenerCalled = false;
+      let captureCalled = false;
+      let passiveCalled = false;
+      let onceCalled = false;
+
+      const listener = (_e: Event) => {
+        listenerCalled = true;
+      };
+      Object.defineProperties(listener, {
+        capture: {
+          get() {
+            captureCalled = true;
+          }
+        },
+        passive: {
+          get() {
+            passiveCalled = true;
+          }
+        },
+        once: {
+          get() {
+            onceCalled = true;
+          }
+        }
+      });
+
+      part.setValue(listener);
+      part.commit();
+      element.click();
+      assert.isTrue(listenerCalled);
+      assert.isTrue(captureCalled);
+      assert.isTrue(passiveCalled);
+      assert.isTrue(onceCalled);
+    });
+
+    test('supports event listener options on objects', () => {
+      part = new EventPart(element, 'click');
+      let listenerCalled = false;
+      let captureCalled = false;
+      let passiveCalled = false;
+      let onceCalled = false;
+
+      const listener = {
+        handleEvent(_e: Event) {
+          listenerCalled = true;
+        },
+        get capture() {
+          captureCalled = true;
+          return undefined;
+        },
+        get passive() {
+          passiveCalled = true;
+          return undefined;
+        },
+        get once() {
+          onceCalled = true;
+          return undefined;
+        }
+      };
+
+      part.setValue(listener);
+      part.commit();
+      element.click();
+      assert.isTrue(listenerCalled);
+      assert.isTrue(captureCalled);
+      assert.isTrue(passiveCalled);
+      assert.isTrue(onceCalled);
     });
   });
 });

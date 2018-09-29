@@ -404,6 +404,14 @@ export class PropertyCommitter extends AttributeCommitter {
 
 export class PropertyPart extends AttributePart {}
 
+declare global {
+  interface EventListenerOptions {
+    capture?: boolean;
+    once?: boolean;
+    passive?: boolean;
+  }
+}
+
 export class EventPart implements Part {
   element: Element;
   eventName: string;
@@ -430,12 +438,22 @@ export class EventPart implements Part {
     if (this._pendingValue === noChange) {
       return;
     }
-    if ((this._pendingValue == null) !== (this.value == null)) {
-      if (this._pendingValue == null) {
-        this.element.removeEventListener(this.eventName, this);
-      } else {
-        this.element.addEventListener(this.eventName, this);
-      }
+
+    const oldListener = this.value;
+    const newListener = this._pendingValue;
+    const shouldRemoveListener = newListener == null ||
+        oldListener != null &&
+            (newListener.capture !== oldListener.capture ||
+             newListener.once !== oldListener.once ||
+             newListener.passive !== oldListener.passive);
+    const shouldAddListener =
+        newListener != null && (oldListener == null || shouldRemoveListener);
+
+    if (shouldRemoveListener) {
+      this.element.removeEventListener(this.eventName, this, oldListener);
+    }
+    if (shouldAddListener) {
+      this.element.addEventListener(this.eventName, this, newListener);
     }
     this.value = this._pendingValue;
     this._pendingValue = noChange;
